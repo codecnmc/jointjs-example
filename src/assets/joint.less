@@ -1,0 +1,250 @@
+html,
+body {
+    margin          : 0;
+    padding         : 0;
+    overflow        : hidden;
+    background-color: #333;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+#myholder {
+    position  : relative;
+    display   : inline-block;
+    background: transparent;
+    overflow  : hidden;
+    .no-select;
+
+    text {
+        pointer-events: none;
+    }
+}
+
+.no-select {
+    -webkit-user-select: none;
+    /*谷歌浏览器和Safari浏览器*/
+    -moz-user-select   : none;
+    /*火狐浏览器*/
+    -ms-user-select    : none;
+    /*部分IE浏览器*/
+    user-select        : none;
+}
+
+.frame {
+    overflow: hidden;
+    width   : 100%;
+    height  : 100%;
+}
+
+#myholder-mini {
+    position: absolute;
+    right   : 0;
+    top     : 45px;
+    border  : 1px solid #ddd;
+    z-index : 99;
+}
+
+#paper-html-elements svg {
+    background: transparent;
+}
+
+#paper-html-elements svg .link {
+    z-index: 2;
+}
+
+.grid-normal {
+    position      : absolute;
+    z-index       : 0;
+    pointer-events: none;
+}
+
+.blue-print {
+
+    width   : 100%;
+    height  : 95.79vh;
+    position: relative;
+
+    .menu {
+        .no-select;
+        position        : absolute;
+        left            : 50%;
+        top             : 50%;
+        width           : 150px;
+        background-color: #2B2B2B;
+        border          : 1px solid #ccc;
+        color           : #fff;
+        z-index         : 999;
+        font-size       : 14px;
+
+        .item {
+            padding        : 0 10px;
+            height         : 40px;
+            line-height    : 40px;
+            cursor         : pointer;
+            display        : flex;
+            justify-content: space-between;
+
+
+            [class^=el-icon-] {
+                line-height: 40px;
+
+            }
+
+        }
+
+
+
+        .menu-item {
+            position: relative;
+            .item;
+
+            .menu-item-item {
+                .item;
+            }
+
+            .item-child {
+                position        : absolute;
+                width           : 150px;
+                right           : -148px;
+                top             : -1px;
+                background-color: #2B2B2B;
+                border          : 1px solid #ccc;
+                color           : #fff;
+                z-index         : 1000;
+                display         : none;
+            }
+        }
+
+
+        .menu-item:hover,
+        .menu-item-item:hover {
+            background-color: #414141;
+
+            .item-child {
+                display: block;
+            }
+        }
+
+    }
+
+    .move {
+        position      : absolute;
+        opacity       : 0.8;
+        z-index       : 9999;
+        pointer-events: none;
+    }
+
+
+}
+
+/* port styling */
+.available-magnet {
+    fill: rgba(255, 255, 255, 0.185);
+}
+
+
+.menu-demo {
+    height          : 45px;
+    background-color: #333;
+    border          : none;
+    user-select     : none;
+
+    span {
+        display    : inline-block;
+        height     : 45px;
+        color      : #fff;
+        line-height: 45px;
+        padding    : 0 20px;
+        cursor     : pointer;
+
+        &:hover {
+            background-color: #414141;
+        }
+    }
+}
+
+.drawer {
+    box-sizing      : border-box;
+    position        : absolute;
+    right           : 0;
+    top             : 45px;
+    z-index         : 2001;
+    background-color: #333;
+    color           : #fff;
+    width           : 400px;
+    height          : 95.2vh;
+    padding         : 10px 20px;
+
+    .title {
+        font-size      : 18px;
+        display        : flex;
+        justify-content: space-between;
+        line-height    : 46px;
+        margin-top     : 0;
+
+        .el-button {
+            font-size: 20px;
+            color    : #fff;
+        }
+    }
+}
+
+.el-tree {
+    border: 1px solid #cacdd1;
+
+    .is-focusable:hover {
+        background: #cacdd1;
+    }
+
+    .is-focusable {
+        background: #fff;
+    }
+
+    overflow: auto;
+}
+
+.el-tree-node__content {
+    padding      : 15px 0;
+    border-bottom: 1px solid #cacdd1;
+
+    &:hover {
+        background: #cacdd1;
+    }
+}
+
+.el-form-item__label {
+    color: #fff;
+}
+
+.tabs-group {
+    position        : absolute;
+    bottom          : 0;
+    z-index         : 2000;
+    left            : 0;
+    width           : 100%;
+    height          : 40px;
+    background-color: #333;
+    color           : #fff;
+    display         : flex;
+
+    .item {
+        user-select: none;
+        padding    : 0 20px;
+        line-height: 40px;
+        cursor     : pointer;
+
+        &:hover {
+            background-color: #414141;
+        }
+    }
+
+    .item.active {
+        background-color: #414141;
+    }
+
+    .el-icon-close{
+        margin-left: 5px;
+    }
+}

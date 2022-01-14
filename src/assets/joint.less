@@ -150,8 +150,9 @@ body {
     background-color: #333;
     border          : none;
     user-select     : none;
+    display         : flex;
 
-    span {
+    >span {
         display    : inline-block;
         height     : 45px;
         color      : #fff;
@@ -163,6 +164,7 @@ body {
             background-color: #414141;
         }
     }
+
 }
 
 .drawer {
@@ -174,8 +176,9 @@ body {
     background-color: #333;
     color           : #fff;
     width           : 400px;
-    height          : 95.2vh;
+    height          : 91vh;
     padding         : 10px 20px;
+    border          : 1px solid #999;
 
     .title {
         font-size      : 18px;
@@ -240,11 +243,50 @@ body {
         }
     }
 
+
+
+
     .item.active {
         background-color: #414141;
+
+        .el-input__inner {
+            border          : 0;
+            background-color: #414141;
+            color           : #fff;
+            font-size       : 16px;
+        }
     }
 
-    .el-icon-close{
+    .el-icon-close {
         margin-left: 5px;
     }
+
+}
+
+.args {
+    display: flex;
+
+    span {
+        width: 70px;
+    }
+
+    margin-bottom: 5px;
+}
+
+.condition-item {
+    display      : flex;
+    line-height  : 40px;
+    margin-bottom: 10px;
+
+    span {
+        width: 90px;
+    }
+
+}
+
+.filename {
+    position: absolute;
+    left    : 0;
+    bottom  : 40px;
+    padding-left: 10px;
 }

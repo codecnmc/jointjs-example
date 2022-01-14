@@ -1,13 +1,20 @@
 /*
  * @Author:廖培坚
  * @Date: 2021-07-08 11:03:58
- * @LastEditTime: 2022-01-12 17:24:08
+ * @LastEditTime: 2022-01-14 17:57:33
  * @LastEditors: 羊驼
  * @Description: 封装jointJs方法
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\src\jointJsTool.js
  */
-import { BlockType, Block, TriggerInfo, ProcessInfo, FuncType } from './struct'
+import { BlockType, Block, TriggerInfo, ProcessInfo } from './struct'
 import { MessageBox, Message } from 'element-ui'
+
+let ipcRenderer;
+try {
+    ipcRenderer = window.require("electron").ipcRenderer;
+} catch (e) { }
+
+
 let defaultLinkOption = {   //连线的设置
     connector: { name: "rounded", args: { radius: 5 } },
     router: { name: "metro" },
@@ -49,7 +56,11 @@ let circleLinkOption = {
 }
 
 import { shapes } from 'jointjs'
-import { data } from 'jquery'
+import store from '../store/index.js'
+
+const state = store.state
+
+
 // 流程图高度
 let height = 4000
 let width = 4000
@@ -64,6 +75,8 @@ class JointClass {
     mustNode = []
     edit = false
     save = true
+    currentDragPositionChange = false
+    pointTarget = null
     constructor(v) {
         this.vue = v
         tools = this
@@ -72,10 +85,16 @@ class JointClass {
         this.initElementTools()
         this.defineBox()
         this.initFlowBlock()
+        this.initShortCutEvent()
     }
 
+    //#region 初始化函数
 
-    // 初始化画布
+    /**
+     * @description: 初始化画布
+     * @param {*}
+     * @return {*}
+     */
     initPaper() {
         let graph = new joint.dia.Graph([], {
             cellNamespace: shapes
@@ -101,7 +120,11 @@ class JointClass {
         this.initPaperEvent()
     }
 
-    // 初始化删除按钮
+    /**
+     * @description: 初始化元素删除按钮
+     * @param {*}
+     * @return {*}
+     */
     initElementTools() {
         let _this = this
         var removeButton = new joint.elementTools.Remove({
@@ -131,9 +154,11 @@ class JointClass {
         });
     }
 
-
-
-    // 获取画布配置
+    /**
+     * @description: 获取画布配置
+     * @param {*} graph
+     * @return {*}
+     */
     getPaperOptions(graph) {
         setTimeout(() => {
             let grid = $('.joint-paper-grid').get(0)
@@ -179,16 +204,150 @@ class JointClass {
         }
     }
 
-    // 查询是否已经有了连接
-    haveConnectTarget(id) {
-        return this.lines.some((item) => {
-            if (item.source.id == id) {
-                return true
+    /**
+     * @description: 快捷键事件监听
+     * @param {*}
+     * @return {*}
+     */
+    initShortCutEvent() {
+        document.addEventListener('keydown', (e) => {
+            let pointTarget = this.pointTarget
+            if (e.key == 'Delete' && pointTarget) {
+                let isLink = pointTarget.model.isLink()
+                this.removeTips(isLink, pointTarget.model.id)
+            }
+            if (e.altKey && e.key == 's') {
+                this.saveData()
             }
         })
     }
 
-    // 自定义元素
+
+    /**
+     * @description: 初始化纸张事件
+     * @param {*}
+     * @return {*}
+     */
+    initPaperEvent() {
+        let [ex, ey] = [0, 0]
+        let frame = $('.frame')
+
+        // blank事件集合
+        this.paper.on(
+            {
+                'blank:pointerdown': (evt, x, y) => {
+                    this.vue.setMenu(false)
+                    $('#myholder').css("cursor", "grab")
+                    ex = evt.offsetX
+                    ey = evt.offsetY
+                    frame.on('mousemove', evt => {
+                        let scrollLeft = frame.scrollLeft() + (ex - evt.offsetX);
+                        let scrollTop = frame.scrollTop() + (ey - evt.offsetY);
+                        scrollLeft = 0 > scrollLeft ? 0 : scrollLeft;
+                        scrollTop = 0 > scrollTop ? 0 : scrollTop;
+                        frame.scrollTop(scrollTop).scrollLeft(scrollLeft)
+                    });
+                },
+                "blank:pointermove": (evt, x, y) => {
+                    $('#myholder').css("cursor", "grab");
+                },
+                'blank:pointerup': (evt, x, y) => {
+                    $('#myholder').css("cursor", "default")
+                    frame.off('mousemove')
+                    state.tabs.forEach((item) => {
+                        if (item.name != '') {
+                            item.edit = false
+                        }
+                    })
+                },
+                'blank:contextmenu': (evt, x, y) => {
+                    let frame = $('.frame')
+                    let left = (evt.offsetX) - frame.scrollLeft() + 'px'
+                    let top = evt.offsetY - frame.scrollTop() + 30 + 'px'
+                    this.vue.setMenu(true, left, top)
+                    let _this = this
+                    _this.vue.cache = {
+                        x: evt.offsetX,
+                        y: evt.offsetY,
+                        width: 150,
+                        height: 50,
+                        form: {}
+                    }
+                    let event = function (e) {
+                        if (e.target.getAttribute('ban')) {
+                            return
+                        }
+                        _this.vue.setMenu(false)
+                        window.removeEventListener('click', event)
+                    }
+                    window.addEventListener('click', event)
+                },
+                'blank:mousewheel': (evt, x1, y2, delta) => {
+                    evt.preventDefault()
+                    const { sx, sy } = this.paper.scale();
+                    let scale = sx + (delta > 0 ? 0.1 : -0.1)
+                    scale = scale < 0.4 ? 0.4 : scale > 1.4 ? 1.4 : scale
+                    this.paper.scale(scale)
+                },
+            })
+
+
+        // cell 事件
+        this.paper.on({
+            'cell:pointermove': (cellView, evt, x, y) => {
+                this.currentDragPositionChange = true
+            },
+            'cell:pointerup': (cellView, evt, x, y) => {
+                if (!this.currentDragPositionChange) {
+                    let data = cellView.model.attributes.data
+                    this.vue.currentForm = data
+                    this.vue.drawer = true
+                }
+                this.currentDragPositionChange = false
+                let model = cellView.model
+                if (!cellView.targetMagnet && model.isLink()) {
+                    model.remove()
+                }
+                else if (cellView.targetMagnet) {
+                    let target = cellView.targetView.model
+                    let source = cellView.sourceView.model
+                    if (this.haveConnectTarget(source, target)) {
+                        return model.remove()
+                    }
+                    this.createLink(source, target, model)
+                    this.setTargetID('create', source.attributes.data, target.id, target.attributes.data)
+                }
+            },
+            'cell:mouseenter': (cell, evt, x, y) => {
+                cell.model.attr("body/filter", {
+                    name: 'highlight',
+                    args: {
+                        color: 'red',
+                        width: 1,
+                        opacity: 1,
+                        blur: 5
+                    }
+                })
+                this.pointTarget = cell
+
+            },
+            'cell:mouseleave': (cell, evt, x, y) => {
+                cell.model.removeAttr("body/filter")
+                this.pointTarget = null
+            },
+            'cell:contextmenu': (cell, evt, x, y) => {
+                let line = cell.model.isLink()
+                this.removeTips(line, cell.model.id)
+            }
+        })
+
+    }
+
+    /**
+     * @description: 自定义元素
+     * @param {*}
+     * @return {*}
+     */
     defineBox() {
 
         let markup = [{
@@ -293,7 +452,11 @@ class JointClass {
     }
 
 
-    // 初始化线的工具
+    /**
+     * @description: 初始化线的工具
+     * @param {*}
+     * @return {*}
+     */
     initLinkTools() {
         var verticesTool = new joint.linkTools.Vertices();
         var boundaryTool = new joint.linkTools.Boundary();
@@ -317,6 +480,11 @@ class JointClass {
         });
     }
 
+    /**
+     * @description: 初始化节点
+     * @param {*}
+     * @return {*}
+     */
     initFlowBlock() {
         this.mustNode = []
         this.nodes = []
@@ -343,7 +511,7 @@ class JointClass {
         let link = new joint.shapes.standard.Link(defaultLinkOption)
         link.source(rect)
         link.target(rect2)
-        this.setTargetID("create", 0, main, "", process)
+        this.setTargetID("create", main, "", process)
         this.graph.addCells([rect, rect2, link])
         this.nodes.push(rect, rect2)
         this.mustNode.push(rect.id, rect2.id)
@@ -355,123 +523,51 @@ class JointClass {
 
     }
 
-    // 初始化纸张事件
-    initPaperEvent() {
-        let [ex, ey] = [0, 0]
-        let frame = $('.frame')
-
-        // blank事件集合
-        this.paper.on(
-            {
-                'blank:pointerdown': (evt, x, y) => {
-                    this.vue.setMenu(false)
-                    $('#myholder').css("cursor", "grab")
-                    ex = evt.offsetX
-                    ey = evt.offsetY
-                    frame.on('mousemove', evt => {
-                        let scrollLeft = frame.scrollLeft() + (ex - evt.offsetX);
-                        let scrollTop = frame.scrollTop() + (ey - evt.offsetY);
-                        scrollLeft = 0 > scrollLeft ? 0 : scrollLeft;
-                        scrollTop = 0 > scrollTop ? 0 : scrollTop;
-                        frame.scrollTop(scrollTop).scrollLeft(scrollLeft)
-                    });
-                },
-                "blank:pointermove": (evt, x, y) => {
-                    $('#myholder').css("cursor", "grab");
-                },
-                'blank:pointerup': (evt, x, y) => {
-                    $('#myholder').css("cursor", "default")
-                    frame.off('mousemove')
-                    this.vue.tabs.forEach((item) => {
-                        item.edit = false
-                    })
-                },
-                'blank:contextmenu': (evt, x, y) => {
-                    let frame = $('.frame')
-                    let left = (evt.offsetX) - frame.scrollLeft() + 'px'
-                    let top = evt.offsetY - frame.scrollTop() + 30 + 'px'
-                    this.vue.setMenu(true, left, top)
-                    let _this = this
-                    _this.vue.cache = {
-                        x: evt.offsetX,
-                        y: evt.offsetY,
-                        width: 150,
-                        height: 50,
-                        form: {}
-                    }
-                    let event = function (e) {
-                        if (e.target.getAttribute('ban')) {
-                            return
-                        }
-                        _this.vue.setMenu(false)
-                        window.removeEventListener('click', event)
-                    }
-                    window.addEventListener('click', event)
-                },
-                'blank:mousewheel': (evt, x1, y2, delta) => {
-                    evt.preventDefault()
-                    const { sx, sy } = this.paper.scale();
-                    let scale = sx + (delta > 0 ? 0.1 : -0.1)
-                    scale = scale < 0.4 ? 0.4 : scale > 1.4 ? 1.4 : scale
-                    this.paper.scale(scale)
-                },
-            })
+    //#endregion
 
 
-        // cell 事件
-        this.paper.on({
-            'cell:pointerup': (cellView, evt, x, y) => {
-                let model = cellView.model
-                if (!cellView.targetMagnet && model.isLink()) {
-                    model.remove()
-                }
-                else if (cellView.targetMagnet) {
-                    let target = cellView.targetView.model
-                    let source = cellView.sourceView.model
-                    this.createLink(source, target, model)
-                    this.setTargetLink(source, target.attributes.data.id)
-                }
-            },
-            'cell:mouseenter': (cell, evt, x, y) => {
-                cell.model.attr("body/filter", {
-                    name: 'highlight',
-                    args: {
-                        color: 'red',
-                        width: 1,
-                        opacity: 1,
-                        blur: 5
-                    }
-                })
-            },
-            'cell:pointerdblclick': (cell, evt, x, y) => {
-                // let data = cell.model.attributes.data
-                // if (!this.mustNode.includes(data.id) || data.mtype > 0) {
-
-                // } else {
-                //     Message.error("入口节点不能操作")
-                // }
-                this.vue.currentForm = cell.model.attributes.data
-                this.vue.drawer = true
-            },
-            'cell:mouseleave': (cell, evt, x, y) => {
-                cell.model.removeAttr("body/filter")
-            },
-            'cell:contextmenu': (cell, evt, x, y) => {
-                let line = cell.model.isLink()
-                this.removeTips(line, cell.model.id)
+    /**
+     * @description: 查询是否已经有了连接
+     * @param {*} source 源对象
+     * @param {*} target 目标对象
+     * @return {*}
+     */
+    haveConnectTarget(source, target) {
+        let links = this.lines
+        for (let i = 0; i < links.length; i++) {
+            let targetID = links[i].target.id
+            let sourceID = links[i].source.id
+            if (source.id == sourceID && targetID == target.id) {
+                return true
             }
-        })
-
+        }
+        return false
     }
 
-    //TODO 根据类型去创建连线位置
+    /**
+     * @description: 是否是必须的节点
+     * @param {*} id
+     * @return {*}
+     */
+    mustNodeExist(id) {
+        return this.mustNode.includes(id)
+    }
+
+
+    /**
+     * @description: 连线逻辑的处理
+     * @param {*} source 源对象
+     * @param {*} target 目标对象
+     * @param {*} model  线的实例
+     * @return {*}
+     */
     createLink(source, target, model) {
         let sourceData = source.attributes.data
         switch (sourceData.mtype) {
             case BlockType.普通节点:
                 if (sourceData.process.length > 0) {
                     model.remove()
-                    let node = this.findNode(sourceData.process[sourceData.process.length - 1].id)
+                    let node = this.graph.getCell(sourceData.process[sourceData.process.length - 1].id)
                     model = new joint.shapes.standard.Link(defaultLinkOption)
                     model.target(target)
                     model.source(node)
@@ -486,6 +582,7 @@ class JointClass {
                 model.addTo(this.graph)
                 break;
         }
+        target.attributes.data.fatherNode = sourceData.id
         this.lines.push({
             target,
             source,
@@ -493,7 +590,12 @@ class JointClass {
         })
     }
 
-    // 删除弹窗提示
+    /**
+     * @description: 删除物体的弹窗提示
+     * @param {*} line
+     * @param {*} id
+     * @return {*}
+     */
     removeTips(line, id) {
         MessageBox.confirm(`此操作将永久删除该${!line ? '节点' : '连接'}, 是否继续?`, '提示', {
             confirmButtonText: '确定',
@@ -510,18 +612,39 @@ class JointClass {
         })
     }
 
-    // 查找节点
+    /**
+     * @description:  获取节点下的data
+     * @param {*} id
+     * @return {*}
+     */
     findNode(id) {
-        let nodes = this.nodes
-        for (let i = 0; i < nodes.length; i++) {
-            let item = nodes[i]
-            if (item.id == id) {
-                return item
-            }
-        }
+        return this.graph.getCell(id)?.attributes.data
     }
 
-    // 创建节点
+    /**
+     * @description: 拖拽后重新渲染正确节点顺序
+     * @param {*} fatherID 父节点的id
+     * @param {*} oldIDs 拖拽前的id
+     * @return {*}
+     */
+    changeNodeData(fatherID, oldIDs) {
+        let father = this.findNode(fatherID)
+        let type = father.mtype == 0 ? 'process' : 'triggersInfo'
+        father[type].forEach((item, index) => {
+            item.id = oldIDs[index]
+            let node = this.graph.getCell(item.id)
+            this.renderNode(node, item)
+        })
+    }
+
+    /**
+     * @description: 创建节点
+     * @param {*} type 节点类型
+     * @param {*} x x坐标
+     * @param {*} y y坐标
+     * @param {*} form 节点要保存的数据结构
+     * @return {*}
+     */
     createNode(type, x, y, form) {
         let node = null
         node = this.getTypeRect(type, x, y);
@@ -532,9 +655,16 @@ class JointClass {
         this.nodes.push(node)
     }
 
+    /**
+     * @description: 根据数据结构渲染节点内容
+     * @param {*} node 节点实例
+     * @param {*} form 结构
+     * @return {*}
+     */
     renderNode(node, form) {
         let name = ""
         let content = ""
+        let FuncType = store.state.FuncType
         switch (form.mtype) {
             case BlockType.普通节点:
                 name = "主流程节点"
@@ -546,12 +676,14 @@ class JointClass {
                 break;
             case BlockType.触发器节点:
                 name = "触发器节点"
-                for (let kv in FuncType) {
-                    if (form.funcType == FuncType[kv]) {
-                        content = kv
-                        break
+                FuncType.some((item) => {
+                    if (!isNaN(parseInt(form.funcType))) {
+                        if (form.funcType == item.value) {
+                            content = item.name
+                            return item
+                        }
                     }
-                }
+                })
                 break;
         }
         node.prop('data', form)
@@ -560,18 +692,18 @@ class JointClass {
     }
 
 
-    // 设置连接
-    setTargetLink(source, id) {
-        let type = source.attributes.mtype
-        let target = this.findNode(id)
-        this.setTargetID('create', type, source.attributes.data, id, target.attributes.data)
-    }
-
-    // 设置连接对象的id
-    setTargetID(mode, type, source, id, target = null) {
+    /**
+     * @description: 设置连接成功后的数据处理
+     * @param {*} mode create or remove 创建或移除
+     * @param {*} source 源数据
+     * @param {*} id 对象id 
+     * @param {*} target 对象实例
+     * @return {*}
+     */
+    setTargetID(mode, source, id, target = null) {
         try {
             let removeArray = []
-            switch (type) {
+            switch (source.mtype) {
                 case BlockType.普通节点:
                     target && source.process.push(target)
                     removeArray = source.process
@@ -590,6 +722,7 @@ class JointClass {
                         return removeArray.splice(i, 1)
                     }
                 })
+
             }
         } catch (e) {
             console.log(e);
@@ -597,28 +730,69 @@ class JointClass {
 
     }
 
-    // 删除节点
+    /**
+     * @description: 删除节点
+     * @param {*} id
+     * @return {*}
+     */
     removeNode(id) {
-        let index = -1
-        if (this.mustNode.includes(id)) {
-            return Message.error("无法删除必要的节点")
-        }
-        this.nodes.some((item, i) => {
-            if (item.id == id) {
-                index = i
-                return item
+        try {
+            let index = -1
+            if (this.mustNode.includes(id)) {
+                return Message.error("无法删除必要的节点")
             }
-        })
-        if (index != -1) {
-            let model = this.nodes[index]
-            this.clearLineWithRemoveNode(id)
-            model.remove()
-            this.nodes.splice(index, 1)
-            this.vue.currentForm = null
+            this.nodes.some((item, i) => {
+                if (item.id == id) {
+                    index = i
+                    return item
+                }
+            })
+            if (index != -1) {
+                let model = this.nodes[index]
+                if (this.vue.currentForm && model.id == this.vue.currentForm.id) {
+                    this.vue.currentForm = null
+                }
+                let data = model.attributes.data
+                if (data.mtype == 1) {
+                    let lastIndex = -1
+                    let nextIndex = -1
+                    let father = this.findNode(data.fatherNode)
+                    father?.process.some((item, index) => {
+                        if (item.id == data.id) {
+                            lastIndex = index - 1
+                            nextIndex = (index + 1) > father.process.length - 1 ? -1 : index + 1
+                            return item
+                        }
+                    })
+                    if (lastIndex != -1 && nextIndex != -1) {
+                        let line = new joint.shapes.standard.Link(defaultLinkOption)
+                        let last = this.graph.getCell(father.process[lastIndex].id)
+                        let next = this.graph.getCell(father.process[nextIndex].id)
+                        line.target(next)
+                        line.source(last)
+                        line.addTo(this.graph)
+                        this.lines.push({
+                            target: next.attributes.data,
+                            source: father,
+                            model: line
+                        })
+                    }
+                }
+
+                this.clearLineWithRemoveNode(id)
+                model.remove()
+                this.nodes.splice(index, 1)
+            }
+        } catch (e) {
+            console.log(e);
         }
     }
 
-    // 当删除点之前 要清除和节点存在关联的targetid
+    /**
+     * @description: 当删除点之前 要清除和节点存在关联的targetid
+     * @param {*} id
+     * @return {*}
+     */
     clearLineWithRemoveNode(id) {
         try {
             for (let i = 0; i < this.lines.length; i++) {
@@ -626,7 +800,7 @@ class JointClass {
                 let target = item.target.attributes
                 let source = item.source.attributes
                 if (target?.id == id) {
-                    this.setTargetID('remove', source.mtype, source.data, id, null)
+                    this.setTargetID('remove', source.data, id, null)
                     this.lines.splice(i--, 1)
                 }
                 if (source?.id == id) {
@@ -639,7 +813,11 @@ class JointClass {
 
     }
 
-    //删除线
+    /**
+     * @description: 删除线
+     * @param {*} id
+     * @return {*}
+     */
     removeLine(id) {
         for (let i = 0; i < this.lines.length; i++) {
             let item = this.lines[i]
@@ -648,6 +826,7 @@ class JointClass {
                     if (this.mustNode.includes(item.target.id) && this.mustNode.includes(item.source.id)) {
                         return Message.error("不能删除两个都是必要节点的连接")
                     }
+                    this.removeLineHandle(item.target)
                     item.model.remove()
                     this.lines.splice(i, 1)
                 }
@@ -659,15 +838,105 @@ class JointClass {
         }
     }
 
-    // 存储数据
-    saveData() {
+    /**
+     * @description: 删除线的时候 需要执行的句柄
+     * @param {*} target
+     * @return {*}
+     */
+    removeLineHandle(target) {
+        let data = target.attributes.data
+        let father = this.findNode(data.fatherNode)
+        switch (data.mtype) {
+            case BlockType.流程节点:
+                let index = -1
+                let removeID = new Set()
+                father.process.forEach((item, i) => {
+                    if (item.id == data.id) {
+                        index = i
+                    }
+                    if (index != -1) {
+                        removeID.add(item.id)
+                    }
+                })
+                let links = this.lines
+                for (let i = 0; i < links.length; i++) {
+                    let line = links[i]
+                    if (removeID.has(line.target.id)) {
+                        line.model.remove()
+                        links.splice(i--, 1)
+                    }
+                }
+                father.process = father.process.slice(0, index)
+                break;
+            case BlockType.触发器节点:
+                this.arrayRemove(father.triggersInfo, data.id)
+                break;
+        }
+    }
+
+    /**
+     * @description: 删除数组指定id
+     * @param {*} data
+     * @param {*} id
+     * @return {*}
+     */
+    arrayRemove(data, id) {
+        for (let i = 0; i < data.length; i++) {
+            let item = data[i]
+            if (item.id == id) {
+                return data.splice(i, 1)
+            }
+        }
+    }
+
+
+    /**
+     * @description: 导出unity数据
+     * @param {*}
+     * @return {*}
+     */
+    exportUnityData() {
         let flowData = this.createExportData()
+        this.createExport(flowData)
+    }
+
+    /**
+     * @description: 导出流程图数据
+     * @param {*}
+     * @return {*}
+     */
+    saveData() {
+        let { tabs, currentTab, FuncType, events } = state
+        tabs[currentTab].data = this.getSaveData()
+        let item = {
+            tabs,
+            currentTab,
+            FuncType,
+            events
+        }
+        if (state.file && state.file.path) {
+            ipcRenderer.send("saveData", {
+                path: state.file.path,
+                data: item
+            })
+        } else {
+            this.createExport(item)
+        }
+
+    }
+
+    /**
+     * @description: 创建导出
+     * @param {*} data
+     * @return {*}
+     */
+    createExport(data) {
         var elementA = document.createElement("a");
         //文件的名称为时间戳加文件名后缀
         elementA.download = +new Date() + ".json";
         elementA.style.display = "none";
         //生成一个blob二进制数据，内容为json数据
-        var blob = new Blob([JSON.stringify(flowData)])
+        var blob = new Blob([JSON.stringify(data)])
         //生成一个指向blob的URL地址，并赋值给a标签的href属性
         elementA.href = URL.createObjectURL(blob);
         document.body.appendChild(elementA);
@@ -675,15 +944,20 @@ class JointClass {
         document.body.removeChild(elementA);
     }
 
-    // 创建导出的结构
+    /**
+     * @description: 创建导出的结构
+     * @param {*}
+     * @return {*}
+     */
     createExportData() {
-        let { tabs, currentTab } = this.vue
+        let { tabs, currentTab } = state
         if (tabs[currentTab].data.length == 0) {
             tabs[currentTab].data = this.getSaveData()
         }
         let blockDatas = {
-            head: tabs[0].data.cells[0].data,
-            blocks: []
+            startBlock: tabs[0].data.cells[0].data,
+            blocks: [],
+            items: state.events
         }
         for (let i = 1; i < tabs.length; i++) {
             if (tabs[i].data?.cells[0]) {
@@ -693,11 +967,21 @@ class JointClass {
         return blockDatas
     }
 
+    /**
+     * @description: 获取当前流程图转json的数据
+     * @param {*}
+     * @return {*}
+     */
     getSaveData() {
         return this.graph.toJSON()
     }
 
-    // 读取数据 从文件读取
+
+    /**
+     * @description: 读取数据 从文件读取
+     * @param {*}
+     * @return {*}
+     */
     async loadData() {
         let data = await new Promise((resolve, reject) => {
             let input = document.createElement('input');
@@ -706,20 +990,58 @@ class JointClass {
             input.onchange = event => {
                 let file = event.target.files[0];
                 let file_reader = new FileReader();
+                store.commit("setFile", file)
+                if (ipcRenderer) {
+                    ipcRenderer.send("saveLastEdit", file.path)
+                }
                 file_reader.onload = () => {
                     let fc = file_reader.result;
                     resolve(fc); // 返回文件文本内容到Promise
-
                 };
                 file_reader.readAsText(file, 'UTF-8');
             };
             input.click();
         });
-        let flowData = JSON.parse(data)
-        this.writeData(flowData)
+        this.loadFromData(data)
     }
 
-    // 写入数据
+    loadFromData(data) {
+        try {
+            data = JSON.parse(data)
+            let { tabs, currentTab, FuncType, events } = data
+            state.tabs = tabs
+            state.currentTab = currentTab
+            state.FuncType = FuncType
+            state.events = events
+            this.writeData(tabs[state.currentTab].data)
+        } catch (err) {
+            this.clearTable()
+            this.initFlowBlock()
+            state.tabs = [
+                {
+                    fixed: true,
+                    edit: false,
+                    name: "主流程",
+                    data: [],
+                },
+            ];
+            state.currentTab = 0
+            state.FuncType = []
+            state.events = []
+            state.file = null
+            if (ipcRenderer) {
+                ipcRenderer.send("saveLastEdit", "")
+            }
+            Message.error("打开失败 格式有误")
+        }
+
+    }
+
+    /**
+     * @description: 写入数据到流程图
+     * @param {*} flowData
+     * @return {*}
+     */
     writeData(flowData) {
         this.clearTable()
         this.graph.fromJSON(flowData)
@@ -743,6 +1065,11 @@ class JointClass {
     }
 
 
+    /**
+     * @description: 清除流程图
+     * @param {*}
+     * @return {*}
+     */
     clearTable() {
         this.nodes = []
         this.lines = []
@@ -750,7 +1077,11 @@ class JointClass {
         this.graph.clear();
     }
 
-    // 获取结构
+    /**
+     * @description: 获取节点对应的结构
+     * @param {*} type
+     * @return {*}
+     */
     getStruct(type) {
         let obj = {}
         switch (type) {
@@ -766,6 +1097,13 @@ class JointClass {
         return obj
     }
 
+    /**
+     * @description: 获取流程图的节点实例
+     * @param {*} type
+     * @param {*} x
+     * @param {*} y
+     * @return {*}
+     */
     getTypeRect(type, x, y) {
         let block = ""
         switch (type) {

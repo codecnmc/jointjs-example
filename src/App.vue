@@ -1,7 +1,7 @@
 <!--
  * @Author: your name
  * @Date: 2021-07-07 17:05:14
- * @LastEditTime: 2022-01-14 17:38:02
+ * @LastEditTime: 2022-01-14 18:49:54
  * @LastEditors: 羊驼
  * @Description: In User Settings Edit
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\components\joint.vue
@@ -92,18 +92,20 @@ export default {
       e.preventDefault();
     };
     try {
-      ipcRenderer.removeAllListeners();
-      ipcRenderer.on("Message", (e, { type, message }) => {
-        this.$message({
-          type,
-          message,
-          duration: 1500,
+      if (ipcRenderer) {
+        ipcRenderer?.removeAllListeners();
+        ipcRenderer.on("Message", (e, { type, message }) => {
+          this.$message({
+            type,
+            message,
+            duration: 1500,
+          });
         });
-      });
-      ipcRenderer.on("openLastEdit", (e, { file, fileData }) => {
-        this.$store.commit("setFile", file);
-        this.tools.loadFromData(fileData);
-      });
+        ipcRenderer.on("openLastEdit", (e, { file, fileData }) => {
+          this.$store.commit("setFile", file);
+          this.tools.loadFromData(fileData);
+        });
+      }
     } catch (e) {
       console.log(e);
     }

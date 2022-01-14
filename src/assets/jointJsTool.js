@@ -1,7 +1,7 @@
 /*
  * @Author:廖培坚
  * @Date: 2021-07-08 11:03:58
- * @LastEditTime: 2022-01-14 17:57:33
+ * @LastEditTime: 2022-01-14 18:53:33
  * @LastEditors: 羊驼
  * @Description: 封装jointJs方法
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\src\jointJsTool.js
@@ -951,18 +951,41 @@ class JointClass {
      */
     createExportData() {
         let { tabs, currentTab } = state
+
         if (tabs[currentTab].data.length == 0) {
             tabs[currentTab].data = this.getSaveData()
         }
+
+        let startBlock = tabs[0].data.cells[0].data
+        for (let i = 0; i < tabs[0].data.cells.length; i++) {
+            let target = tabs[0].data.cells[i].data
+            if (target) {
+                startBlock.process.forEach((item) => {
+                    if (target.id == item.id) {
+                        item.triggersInfo = target.triggersInfo
+                    }
+                })
+            }
+        }
         let blockDatas = {
-            startBlock: tabs[0].data.cells[0].data,
+            startBlock,
             blocks: [],
             items: state.events
         }
+
         for (let i = 1; i < tabs.length; i++) {
-            if (tabs[i].data?.cells[0]) {
-                blockDatas.blocks.push(tabs[i].data.cells[0].data)
+            let block = tabs[i].data.cells[0].data
+            for (let j = 0; j < tabs[i].data.cells.length; j++) {
+                let target = tabs[i].data.cells[j].data
+                if (target) {
+                    block.process.forEach((item) => {
+                        if (target.id == item.id) {
+                            item.triggersInfo = target.triggersInfo
+                        }
+                    })
+                }
             }
+            blockDatas.blocks.push(block)
         }
         return blockDatas
     }

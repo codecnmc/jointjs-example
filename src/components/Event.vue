@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-14 13:44:56
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-14 16:25:52
+ * @LastEditTime: 2022-01-17 13:49:00
  * @Description: file content
 -->
 <template>
@@ -19,7 +19,7 @@
     >添加事件</el-button>
     <el-table
       :data="currentData"
-      height="600px"
+      height="55vh"
     >
       <el-table-column label="触发流程">
         <template #default='{row}'>
@@ -129,6 +129,7 @@
 </template>
 
 <script>
+
 import { Message } from "element-ui";
 import { BlockType } from "../assets/struct.js";
 export default {

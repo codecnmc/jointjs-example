@@ -1,7 +1,7 @@
 <!--
  * @Author: your name
  * @Date: 2021-07-07 17:05:14
- * @LastEditTime: 2022-01-14 18:49:54
+ * @LastEditTime: 2022-01-17 13:42:49
  * @LastEditors: 羊驼
  * @Description: In User Settings Edit
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\components\joint.vue
@@ -37,6 +37,7 @@
 </template>
 
 <script>
+
 import tools from "./assets/jointJsTool.js";
 import BottomBar from "./components/BottomBar.vue";
 import TopBar from "./components/TopBar.vue";
@@ -81,6 +82,7 @@ export default {
         if (nv && nv.mtype >= 0) {
           let node = this.tools.graph.getCell(nv.id);
           this.tools.renderNode(node, nv);
+          this.$store.commit("setSave", false);
         }
       },
       deep: true,
@@ -95,6 +97,9 @@ export default {
       if (ipcRenderer) {
         ipcRenderer?.removeAllListeners();
         ipcRenderer.on("Message", (e, { type, message }) => {
+          if (type == "error") {
+            this.$store.commit("setSave", false);
+          }
           this.$message({
             type,
             message,
@@ -125,6 +130,7 @@ export default {
       this.mode = "create";
       this.cache.form = this.tools.getStruct(type);
       this.tools.createNode(type, this.cache.x, this.cache.y, this.cache.form);
+      this.$store.commit("setSave", false);
     },
   },
 };

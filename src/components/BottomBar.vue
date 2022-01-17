@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-13 09:47:07
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-14 17:05:50
+ * @LastEditTime: 2022-01-17 10:31:03
  * @Description: file content
 -->
 <template>
@@ -37,7 +37,7 @@
       @click="createTab"
     >
     </div>
-    <p class="filename">当前文件：{{file?file.name:"未命名"}}</p>
+    <p class="filename">当前文件：{{file?file.name:"未命名"}}{{save?'':'*'}}</p>
   </div>
 </template>
 
@@ -64,6 +64,9 @@ export default {
     file() {
       return this.$store.state.file;
     },
+    save(){
+      return this.$store.state.save
+    }
   },
   methods: {
     closeTab(index) {

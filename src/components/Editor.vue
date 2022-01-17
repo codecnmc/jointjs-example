@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-13 11:36:32
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-14 18:17:27
+ * @LastEditTime: 2022-01-17 11:02:10
  * @Description: file content
 -->
 <template>
@@ -90,17 +90,20 @@
         </template>
         <template v-else>
           <el-form-item label="场景物体触发器标签">
-            <el-input
+            <el-autocomplete
+              :fetch-suggestions="querySearch"
+              placeholder="请输入物体标签"
               v-model="currentForm.tag"
-              maxlength="20"
+              :maxlength="20"
               maxLength="20"
               show-word-limit
-            ></el-input>
+              @blur="checkBlur"
+            ></el-autocomplete>
           </el-form-item>
           <el-form-item label="触发器激活功能">
             <el-select
               v-model="currentForm.funcType"
-              placeholder="请选择"
+              placeholder="请选择触发器功能"
               @change="changeType"
             >
               <el-option
@@ -115,7 +118,7 @@
           <el-form-item label="触发器激活机制">
             <el-select
               v-model="currentForm.triggerType"
-              placeholder="请选择"
+              placeholder="请选择激活机制"
             >
               <el-option
                 v-for="(value,key) in FuncTriggerType"
@@ -214,6 +217,22 @@ export default {
           return item;
         }
       });
+    },
+    querySearch(queryString, cb) {
+      var suggest = this.$store.state.tagList;
+      var results = queryString
+        ? suggest.filter(this.createFilter(queryString))
+        : suggest;
+      cb(results);
+    },
+    createFilter(queryString) {
+      return (tag) => {
+        return tag.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0;
+      };
+    },
+    checkBlur(e) {
+      let value = e.target.value;
+      this.$store.commit("checkRepeat", value);
     },
   },
 };

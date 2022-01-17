@@ -76,7 +76,7 @@ body {
         border          : 1px solid #ccc;
         color           : #fff;
         z-index         : 999;
-        font-size       : 14px;
+        font-size       : .175rem;
 
         .item {
             padding        : 0 10px;
@@ -85,7 +85,7 @@ body {
             cursor         : pointer;
             display        : flex;
             justify-content: space-between;
-
+            font-size      : 14px;
 
             [class^=el-icon-] {
                 line-height: 40px;
@@ -146,6 +146,7 @@ body {
 
 
 .menu-demo {
+
     height          : 45px;
     background-color: #333;
     border          : none;
@@ -158,6 +159,7 @@ body {
         color      : #fff;
         line-height: 45px;
         padding    : 0 20px;
+        font-size  : 16px;
         cursor     : pointer;
 
         &:hover {
@@ -173,12 +175,11 @@ body {
     right           : 0;
     top             : 45px;
     z-index         : 2001;
-    background-color: #333;
+    background-color: #444;
     color           : #fff;
     width           : 400px;
-    height          : 91vh;
+    height          : 91.55vh;
     padding         : 10px 20px;
-    border          : 1px solid #999;
 
     .title {
         font-size      : 18px;
@@ -195,7 +196,7 @@ body {
 }
 
 .el-tree {
-    border: 1px solid #cacdd1;
+    border: .0125rem solid #cacdd1;
 
     .is-focusable:hover {
         background: #cacdd1;
@@ -237,6 +238,7 @@ body {
         padding    : 0 20px;
         line-height: 40px;
         cursor     : pointer;
+        font-size  : 16px;
 
         &:hover {
             background-color: #414141;
@@ -275,18 +277,78 @@ body {
 
 .condition-item {
     display      : flex;
-    line-height  : 40px;
-    margin-bottom: 10px;
+    line-height  : .5rem;
+    margin-bottom: .125rem;
 
     span {
-        width: 90px;
+        width: 1.125rem;
     }
 
 }
 
 .filename {
-    position: absolute;
-    left    : 0;
-    bottom  : 40px;
+    position    : absolute;
+    left        : 0;
+    bottom      : 40px;
     padding-left: 10px;
+    font-size   : 16px;
+    user-select : none;
+}
+
+.w-control {
+    flex           : 1;
+    display        : flex;
+    justify-content: flex-end;
+
+    span {
+        display    : inline-block;
+        height     : 45px;
+        color      : #fff;
+        line-height: 45px;
+        padding    : 0 20px;
+        font-size  : 16px;
+        cursor     : pointer;
+
+        &:hover {
+            background-color: #414141;
+
+        }
+    }
+
+    .drag {
+        -webkit-app-region: drag;
+        flex              : 1;
+    }
+}
+
+@media screen and (max-width:1024px) {
+
+    .menu-demo,
+    .w-control {
+        >span {
+
+            padding  : 0 15px;
+            font-size: 14px;
+        }
+    }
+
+    .drawer {
+        width  : 300px;
+        height : 89vh;
+        padding: 10px 20px;
+
+        .title {
+            font-size      : 18px;
+            display        : flex;
+            justify-content: space-between;
+            line-height    : 46px;
+            margin-top     : 0;
+
+            .el-button {
+                font-size: 20px;
+                color    : #fff;
+            }
+        }
+    }
+
 }

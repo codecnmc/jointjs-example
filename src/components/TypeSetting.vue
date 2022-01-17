@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-14 11:40:02
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-14 15:03:29
+ * @LastEditTime: 2022-01-17 13:48:11
  * @Description: file content
 -->
 <template>
@@ -33,7 +33,7 @@
     </div>
     <el-table
       :data="FuncType"
-      height="600px"
+      height="60vh"
     >
       <el-table-column
         label="枚举名称"
@@ -44,6 +44,7 @@
           <el-input
             v-else
             v-model="row.name"
+            ref="input"
             size="mini"
           ></el-input>
         </template>
@@ -121,6 +122,11 @@ export default {
       },
     },
   },
+  data() {
+    return {
+      timer: null,
+    };
+  },
   watch: {
     visible(nv, ov) {
       if (nv) {
@@ -175,12 +181,20 @@ export default {
       this.FuncType = [];
     },
     pushType() {
+      clearTimeout(this.timer);
       this.FuncType.push({
         name: "",
         value: this.FuncType.length,
         args: 0,
         edit: true,
       });
+      this.timer = setTimeout(() => {
+        if (Array.isArray(this.$refs.input)) {
+          this.$refs.input[this.$refs.input.length - 1].focus();
+        } else {
+          this.$refs?.input.focus();
+        }
+      }, 100);
     },
     deleteType(index) {
       this.FuncType.splice(index, 1);

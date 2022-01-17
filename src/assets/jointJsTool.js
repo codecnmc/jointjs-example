@@ -1,7 +1,7 @@
 /*
  * @Author:廖培坚
  * @Date: 2021-07-08 11:03:58
- * @LastEditTime: 2022-01-14 18:53:33
+ * @LastEditTime: 2022-01-17 14:46:55
  * @LastEditors: 羊驼
  * @Description: 封装jointJs方法
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\src\jointJsTool.js
@@ -73,8 +73,6 @@ class JointClass {
     lines = []
     box = null
     mustNode = []
-    edit = false
-    save = true
     currentDragPositionChange = false
     pointTarget = null
     constructor(v) {
@@ -121,7 +119,7 @@ class JointClass {
     }
 
     /**
-     * @description: 初始化元素删除按钮
+     * @description: 初始化元素工具按钮
      * @param {*}
      * @return {*}
      */
@@ -211,13 +209,26 @@ class JointClass {
      */
     initShortCutEvent() {
         document.addEventListener('keydown', (e) => {
+            e.preventDefault()
             let pointTarget = this.pointTarget
+            // 删除快捷键
             if (e.key == 'Delete' && pointTarget) {
                 let isLink = pointTarget.model.isLink()
                 this.removeTips(isLink, pointTarget.model.id)
             }
+            // 保存快捷键
             if (e.altKey && e.key == 's') {
                 this.saveData()
+            }
+
+            // 克隆快捷键
+            if (e.altKey && e.key == 'd' && pointTarget) {
+                this.cloneNode(pointTarget)
+            }
+
+            // 插入子节点快捷键
+            if (e.key == 'Insert' && pointTarget) {
+                this.insertChildNode(pointTarget)
             }
         })
     }
@@ -526,23 +537,7 @@ class JointClass {
     //#endregion
 
 
-    /**
-     * @description: 查询是否已经有了连接
-     * @param {*} source 源对象
-     * @param {*} target 目标对象
-     * @return {*}
-     */
-    haveConnectTarget(source, target) {
-        let links = this.lines
-        for (let i = 0; i < links.length; i++) {
-            let targetID = links[i].target.id
-            let sourceID = links[i].source.id
-            if (source.id == sourceID && targetID == target.id) {
-                return true
-            }
-        }
-        return false
-    }
+    //#region 节点处理
 
     /**
      * @description: 是否是必须的节点
@@ -553,64 +548,6 @@ class JointClass {
         return this.mustNode.includes(id)
     }
 
-
-    /**
-     * @description: 连线逻辑的处理
-     * @param {*} source 源对象
-     * @param {*} target 目标对象
-     * @param {*} model  线的实例
-     * @return {*}
-     */
-    createLink(source, target, model) {
-        let sourceData = source.attributes.data
-        switch (sourceData.mtype) {
-            case BlockType.普通节点:
-                if (sourceData.process.length > 0) {
-                    model.remove()
-                    let node = this.graph.getCell(sourceData.process[sourceData.process.length - 1].id)
-                    model = new joint.shapes.standard.Link(defaultLinkOption)
-                    model.target(target)
-                    model.source(node)
-                    model.addTo(this.graph)
-                }
-                break;
-            case BlockType.流程节点:
-                model.remove()
-                model = new joint.shapes.standard.Link(circleLinkOption)
-                model.target(target)
-                model.source(source)
-                model.addTo(this.graph)
-                break;
-        }
-        target.attributes.data.fatherNode = sourceData.id
-        this.lines.push({
-            target,
-            source,
-            model,
-        })
-    }
-
-    /**
-     * @description: 删除物体的弹窗提示
-     * @param {*} line
-     * @param {*} id
-     * @return {*}
-     */
-    removeTips(line, id) {
-        MessageBox.confirm(`此操作将永久删除该${!line ? '节点' : '连接'}, 是否继续?`, '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-        }).then(() => {
-            if (line) {
-                this.removeLine(id)
-            } else {
-                this.removeNode(id)
-            }
-        }).catch(() => {
-
-        })
-    }
 
     /**
      * @description:  获取节点下的data
@@ -653,6 +590,7 @@ class JointClass {
         this.renderNode(node, form)
         node.addTo(this.graph)
         this.nodes.push(node)
+        return node
     }
 
     /**
@@ -693,42 +631,61 @@ class JointClass {
 
 
     /**
-     * @description: 设置连接成功后的数据处理
-     * @param {*} mode create or remove 创建或移除
-     * @param {*} source 源数据
-     * @param {*} id 对象id 
-     * @param {*} target 对象实例
+     * @description: 克隆节点
+     * @param {*} target
      * @return {*}
      */
-    setTargetID(mode, source, id, target = null) {
-        try {
-            let removeArray = []
-            switch (source.mtype) {
-                case BlockType.普通节点:
-                    target && source.process.push(target)
-                    removeArray = source.process
-                    break;
+    cloneNode(target) {
+        let attributes = target.model.attributes
+        let mtype = attributes.mtype
+        if (mtype) {
+            let data = attributes.data
+            let { x, y } = attributes.position
+            let struct = this.getStruct(mtype)
+            switch (mtype) {
                 case BlockType.流程节点:
-                    target && source.triggersInfo.push(target)
-                    removeArray = source.triggersInfo
+                    struct.process = data.process
                     break;
                 case BlockType.触发器节点:
-                    source.nextTrigger = target
+                    struct.tag = data.tag
+                    struct.userTip = data.userTip
+                    struct.triggerType = data.triggerType
+                    struct.funcType = data.funcType
+                    struct.funcArgs = data.funcArgs
                     break;
             }
-            if (mode == 'remove') {
-                removeArray.some((item, i) => {
-                    if (item.id == id) {
-                        return removeArray.splice(i, 1)
-                    }
-                })
-
-            }
-        } catch (e) {
-            console.log(e);
+            this.createNode(mtype, x + 250, y, struct)
         }
-
     }
+
+    /**
+     * @description: 快速插入子节点
+     * @param {*} target
+     * @return {*}
+     */
+    insertChildNode(node) {
+        let attributes = node.model.attributes
+        let mtype = attributes.mtype
+        if (mtype >= 0) {
+            let { x, y } = attributes.position
+            let target = null
+            let form = null
+            switch (mtype) {
+                case BlockType.普通节点:
+                    form = this.getStruct(BlockType.流程节点)
+                    break;
+                case BlockType.流程节点:
+                case BlockType.触发器节点:
+                    form = this.getStruct(BlockType.触发器节点)
+                    break;
+            }
+            target = this.createNode(form.mtype, x + 250, y, form)
+            let source = node.model
+            this.createLink(source, target, null)
+            this.setTargetID('create', source.attributes.data, target.id, target.attributes.data)
+        }
+    }
+
 
     /**
      * @description: 删除节点
@@ -748,6 +705,7 @@ class JointClass {
                 }
             })
             if (index != -1) {
+                state.save = false
                 let model = this.nodes[index]
                 if (this.vue.currentForm && model.id == this.vue.currentForm.id) {
                     this.vue.currentForm = null
@@ -788,6 +746,104 @@ class JointClass {
         }
     }
 
+    //#endregion
+
+    //#region  连线处理
+
+    /**
+     * @description: 查询是否已经有了连接
+     * @param {*} source 源对象
+     * @param {*} target 目标对象
+     * @return {*}
+     */
+    haveConnectTarget(source, target) {
+        let links = this.lines
+        for (let i = 0; i < links.length; i++) {
+            let targetID = links[i].target.id
+            let sourceID = links[i].source.id
+            if (source.id == sourceID && targetID == target.id) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * @description: 连线逻辑的处理
+     * @param {*} source 源对象
+     * @param {*} target 目标对象
+     * @param {*} model  线的实例
+     * @return {*}
+     */
+    createLink(source, target, model) {
+        let sourceData = source.attributes.data
+        switch (sourceData.mtype) {
+            case BlockType.普通节点:
+                if (sourceData.process.length > 0) {
+                    model?.remove()
+                    let node = this.graph.getCell(sourceData.process[sourceData.process.length - 1].id)
+                    model = new joint.shapes.standard.Link(defaultLinkOption)
+                    model.target(target)
+                    model.source(node)
+                    model.addTo(this.graph)
+                }
+                break;
+            case BlockType.流程节点:
+                model?.remove()
+                model = new joint.shapes.standard.Link(circleLinkOption)
+                model.target(target)
+                model.source(source)
+                model.addTo(this.graph)
+                break;
+        }
+        target.attributes.data.fatherNode = sourceData.id
+        this.lines.push({
+            target,
+            source,
+            model,
+        })
+    }
+
+    /**
+     * @description: 设置连接成功后的数据处理
+     * @param {*} mode create or remove 创建或移除
+     * @param {*} source 源数据
+     * @param {*} id 对象id 
+     * @param {*} target 对象实例
+     * @return {*}
+     */
+    setTargetID(mode, source, id, target = null) {
+        try {
+            state.save = false
+            let removeArray = []
+            switch (source.mtype) {
+                case BlockType.普通节点:
+                    target && source.process.push(target)
+                    removeArray = source.process
+                    break;
+                case BlockType.流程节点:
+                    target && source.triggersInfo.push(target)
+                    removeArray = source.triggersInfo
+                    break;
+                case BlockType.触发器节点:
+                    source.nextTrigger = target
+                    break;
+            }
+            if (mode == 'remove') {
+                removeArray.some((item, i) => {
+                    if (item.id == id) {
+                        return removeArray.splice(i, 1)
+                    }
+                })
+
+            }
+        } catch (e) {
+            console.log(e);
+        }
+
+    }
+
+
     /**
      * @description: 当删除点之前 要清除和节点存在关联的targetid
      * @param {*} id
@@ -826,6 +882,7 @@ class JointClass {
                     if (this.mustNode.includes(item.target.id) && this.mustNode.includes(item.source.id)) {
                         return Message.error("不能删除两个都是必要节点的连接")
                     }
+                    state.save = false
                     this.removeLineHandle(item.target)
                     item.model.remove()
                     this.lines.splice(i, 1)
@@ -874,6 +931,8 @@ class JointClass {
         }
     }
 
+
+
     /**
      * @description: 删除数组指定id
      * @param {*} data
@@ -889,6 +948,31 @@ class JointClass {
         }
     }
 
+    //#endregion
+
+    //#region 功能性函数
+
+    /**
+     * @description: 删除物体的弹窗提示
+     * @param {*} line
+     * @param {*} id
+     * @return {*}
+     */
+    removeTips(line, id) {
+        MessageBox.confirm(`此操作将永久删除该${!line ? '节点' : '连接'}, 是否继续?`, '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+        }).then(() => {
+            if (line) {
+                this.removeLine(id)
+            } else {
+                this.removeNode(id)
+            }
+        }).catch(() => {
+
+        })
+    }
 
     /**
      * @description: 导出unity数据
@@ -912,17 +996,24 @@ class JointClass {
             tabs,
             currentTab,
             FuncType,
-            events
+            events,
+            tagList
         }
+
         if (state.file && state.file.path) {
+            state.save = true
             ipcRenderer.send("saveData", {
                 path: state.file.path,
                 data: item
             })
         } else {
-            this.createExport(item)
+            if (ipcRenderer) {
+                state.save = true
+                ipcRenderer.send("saveFile", JSON.stringify(item))
+            } else {
+                this.createExport(item)
+            }
         }
-
     }
 
     /**
@@ -951,41 +1042,36 @@ class JointClass {
      */
     createExportData() {
         let { tabs, currentTab } = state
-
-        if (tabs[currentTab].data.length == 0) {
-            tabs[currentTab].data = this.getSaveData()
-        }
-
-        let startBlock = tabs[0].data.cells[0].data
-        for (let i = 0; i < tabs[0].data.cells.length; i++) {
-            let target = tabs[0].data.cells[i].data
-            if (target) {
-                startBlock.process.forEach((item) => {
-                    if (target.id == item.id) {
-                        item.triggersInfo = target.triggersInfo
-                    }
-                })
-            }
-        }
-        let blockDatas = {
-            startBlock,
-            blocks: [],
-            items: state.events
-        }
-
-        for (let i = 1; i < tabs.length; i++) {
+        tabs[currentTab].data = this.getSaveData()
+        // 重新绑定指针关系 否则指针不变 数组不会收到影响
+        for (let i = 0; i < tabs.length; i++) {
             let block = tabs[i].data.cells[0].data
-            for (let j = 0; j < tabs[i].data.cells.length; j++) {
+            let map = new Map()
+            for (let j = 1; j < tabs[i].data.cells.length; j++) {
                 let target = tabs[i].data.cells[j].data
                 if (target) {
-                    block.process.forEach((item) => {
-                        if (target.id == item.id) {
-                            item.triggersInfo = target.triggersInfo
+                    map.set(target.id, target)
+                }
+            }
+            for (let j = 0; j < block.process.length; j++) {
+                let item = block.process[j]
+                if (map.has(item.id)) {
+                    block.process[j] = map.get(item.id)
+                    block.process[j].triggersInfo.forEach((trigger, index) => {
+                        if (map.has(trigger.id)) {
+                            block.process[j].triggersInfo[index] = map.get(trigger.id)
                         }
                     })
                 }
             }
-            blockDatas.blocks.push(block)
+        }
+        let blockDatas = {
+            startBlock: tabs[0].data.cells[0].data,
+            blocks: [],
+            items: state.events
+        }
+        for (let i = 1; i < tabs.length; i++) {
+            blockDatas.blocks.push(tabs[i].data.cells[0].data)
         }
         return blockDatas
     }
@@ -1037,27 +1123,40 @@ class JointClass {
             state.FuncType = FuncType
             state.events = events
             this.writeData(tabs[state.currentTab].data)
+            state.save = true
         } catch (err) {
-            this.clearTable()
-            this.initFlowBlock()
-            state.tabs = [
-                {
-                    fixed: true,
-                    edit: false,
-                    name: "主流程",
-                    data: [],
-                },
-            ];
-            state.currentTab = 0
-            state.FuncType = []
-            state.events = []
-            state.file = null
-            if (ipcRenderer) {
-                ipcRenderer.send("saveLastEdit", "")
-            }
+            this.newFlow()
             Message.error("打开失败 格式有误")
+            console.log(err);
         }
 
+    }
+
+    /**
+     * @description: 新建流程
+     * @param {*}
+     * @return {*}
+     */
+    newFlow() {
+        this.clearTable()
+        this.initFlowBlock()
+        state.tabs = [
+            {
+                fixed: true,
+                edit: false,
+                name: "主流程",
+                data: [],
+            },
+        ];
+        state.currentTab = 0
+        state.FuncType = []
+        state.events = []
+        state.file = null
+        state.save = true
+        state.tagList = []
+        if (ipcRenderer) {
+            ipcRenderer.send("saveLastEdit", "")
+        }
     }
 
     /**
@@ -1148,6 +1247,8 @@ class JointClass {
         )
         return rect
     }
+
+    //#endregion
 
 
 }

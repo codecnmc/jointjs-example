@@ -1,7 +1,7 @@
 /*
  * @Author:廖培坚
  * @Date: 2021-07-08 11:03:58
- * @LastEditTime: 2022-01-17 14:46:55
+ * @LastEditTime: 2022-01-17 15:14:19
  * @LastEditors: 羊驼
  * @Description: 封装jointJs方法
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\src\jointJsTool.js
@@ -209,7 +209,6 @@ class JointClass {
      */
     initShortCutEvent() {
         document.addEventListener('keydown', (e) => {
-            e.preventDefault()
             let pointTarget = this.pointTarget
             // 删除快捷键
             if (e.key == 'Delete' && pointTarget) {
@@ -681,7 +680,11 @@ class JointClass {
             }
             target = this.createNode(form.mtype, x + 250, y, form)
             let source = node.model
-            this.createLink(source, target, null)
+            let model = new joint.shapes.standard.Link(defaultLinkOption)
+            model.target(target)
+            model.source(source)
+            model.addTo(this.graph)
+            this.createLink(source, target, model)
             this.setTargetID('create', source.attributes.data, target.id, target.attributes.data)
         }
     }
@@ -990,7 +993,7 @@ class JointClass {
      * @return {*}
      */
     saveData() {
-        let { tabs, currentTab, FuncType, events } = state
+        let { tabs, currentTab, FuncType, events, tagList } = state
         tabs[currentTab].data = this.getSaveData()
         let item = {
             tabs,

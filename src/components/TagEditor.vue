@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-17 10:59:30
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-17 13:48:27
+ * @LastEditTime: 2022-01-17 15:51:12
  * @Description: file content
 -->
 <template>
@@ -130,6 +130,15 @@ export default {
       if (row.value == "") {
         return Message.error("标签名称不能为空");
       }
+      let set = new Set();
+      for (let i = 0; i < this.tags.length; i++) {
+        let item = this.tags[i];
+        if (set.has(row.value)) {
+          return Message.error("标签名重复");
+        }
+        set.add(item.value);
+      }
+
       row.edit = false;
     },
     checkEditState(done) {

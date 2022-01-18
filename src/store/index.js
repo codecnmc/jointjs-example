@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-12 17:33:35
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-17 11:20:03
+ * @LastEditTime: 2022-01-17 15:29:39
  * @Description: file content
  */
 import Vue from 'vue'
@@ -58,7 +58,10 @@ export default new Vuex.Store({
       state.tagList = data
     },
     checkRepeat(state, data) {
-      let set = new Set(state.tagList)
+      let set = new Set()
+      state.tagList.forEach((item) => {
+        set.add(item.value)
+      })
       if (!set.has(data)) {
         state.tagList.push({ value: data, edit: false })
       }

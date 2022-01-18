@@ -1,7 +1,7 @@
 /*
  * @Author:廖培坚
  * @Date: 2021-07-08 11:03:58
- * @LastEditTime: 2022-01-17 15:14:19
+ * @LastEditTime: 2022-01-18 09:05:12
  * @LastEditors: 羊驼
  * @Description: 封装jointJs方法
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\src\jointJsTool.js
@@ -616,7 +616,7 @@ class JointClass {
                 FuncType.some((item) => {
                     if (!isNaN(parseInt(form.funcType))) {
                         if (form.funcType == item.value) {
-                            content = item.name
+                            content = `标签名称:${form.tag}\n触发功能:${item.name}`
                             return item
                         }
                     }
@@ -929,7 +929,11 @@ class JointClass {
                 father.process = father.process.slice(0, index)
                 break;
             case BlockType.触发器节点:
-                this.arrayRemove(father.triggersInfo, data.id)
+                if (father.mtype == BlockType.流程节点) {
+                    this.arrayRemove(father.triggersInfo, data.id)
+                } else {
+                    father.nextTrigger = null
+                }
                 break;
         }
     }
@@ -1120,11 +1124,12 @@ class JointClass {
     loadFromData(data) {
         try {
             data = JSON.parse(data)
-            let { tabs, currentTab, FuncType, events } = data
+            let { tabs, currentTab, FuncType, events, tagList } = data
             state.tabs = tabs
             state.currentTab = currentTab
             state.FuncType = FuncType
             state.events = events
+            state.tagList = tagList
             this.writeData(tabs[state.currentTab].data)
             state.save = true
         } catch (err) {

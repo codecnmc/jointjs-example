@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-10 18:08:39
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-14 15:15:40
+ * @LastEditTime: 2022-01-18 09:05:27
  * @Description: file content
  */
 
@@ -40,6 +40,7 @@ export const BlockType = {
 export class Block {
     // 流程id
     id = ""
+    title=""
     // 流程名称
     blockName = "节点"
     // 命令列表
@@ -52,6 +53,7 @@ export class Block {
 export class ProcessInfo {
     id = ""
     process = "新建流程"
+    title=""
     mtype = BlockType.流程节点
     triggersInfo = []
     processTip = ""
@@ -62,6 +64,7 @@ export class ProcessInfo {
 export class TriggerInfo {
     id = ""
     tag = ""
+    title=""
     userTip = ""
     triggerType = FuncTriggerType.直接调用
     mtype = BlockType.触发器节点

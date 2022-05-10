@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-10 18:08:39
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-18 09:05:27
+ * @LastEditTime: 2022-05-10 09:32:58
  * @Description: file content
  */
 
@@ -15,21 +15,6 @@ export const FuncTriggerType = {
     强制触发调用: 3,
 }
 
-// export var FuncType = {
-//     // 学习资源: 0,
-//     // 对话: 1,
-
-//     // 自动对话: 2,
-//     // 做选择题: 3,
-//     // 做物品准备: 4,
-//     // 播放动画: 5,
-//     // 体位调整: 6,
-//     // 餐前准备: 7,
-//     // 查看信息: 8,
-//     // 提示弹窗: 9,
-//     // 展示菜单: 10,
-//     // 其他: 500
-// }
 
 export const BlockType = {
     普通节点: 0,

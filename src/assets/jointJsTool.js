@@ -1,7 +1,7 @@
 /*
  * @Author:廖培坚
  * @Date: 2021-07-08 11:03:58
- * @LastEditTime: 2022-01-18 09:05:12
+ * @LastEditTime: 2022-05-10 09:33:22
  * @LastEditors: 羊驼
  * @Description: 封装jointJs方法
  * @FilePath: \vue-admin-teaching-management-platform\src\views\pharmaceutical-marketing\src\jointJsTool.js
@@ -310,6 +310,7 @@ class JointClass {
             'cell:pointerup': (cellView, evt, x, y) => {
                 if (!this.currentDragPositionChange) {
                     let data = cellView.model.attributes.data
+                    console.log(data)
                     this.vue.currentForm = data
                     this.vue.drawer = true
                 }
@@ -604,25 +605,24 @@ class JointClass {
         let FuncType = store.state.FuncType
         switch (form.mtype) {
             case BlockType.普通节点:
-                name = "主流程节点"
                 content = form.blockName
                 break;
             case BlockType.流程节点:
-                name = "流程节点"
                 content = form.process
                 break;
             case BlockType.触发器节点:
-                name = "触发器节点"
+                content = `标签名称:${form.tag}\n`
                 FuncType.some((item) => {
                     if (!isNaN(parseInt(form.funcType))) {
                         if (form.funcType == item.value) {
-                            content = `标签名称:${form.tag}\n触发功能:${item.name}`
+                            content += `触发功能:${item.name}`
                             return item
                         }
                     }
                 })
                 break;
         }
+        name = form.title
         node.prop('data', form)
         node.attr("title/textWrap/text", name)
         node.attr("content/textWrap/text", content)
@@ -1152,7 +1152,7 @@ class JointClass {
             {
                 fixed: true,
                 edit: false,
-                name: "主流程",
+                name: "触发入口",
                 data: [],
             },
         ];

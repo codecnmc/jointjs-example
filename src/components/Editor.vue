@@ -2,7 +2,7 @@
  * @Author: 羊驼
  * @Date: 2022-01-13 11:36:32
  * @LastEditors: 羊驼
- * @LastEditTime: 2022-01-17 11:02:10
+ * @LastEditTime: 2022-05-10 09:26:06
  * @Description: file content
 -->
 <template>
@@ -23,18 +23,24 @@
         label-position='top'
         @submit.native.prevent
       >
+        <el-form-item label="节点标题">
+          <el-input
+            v-model="currentForm.title"
+            maxlength="20"
+            show-word-limit
+          ></el-input>
+        </el-form-item>
         <template v-if="currentForm.mtype==0">
           <el-form-item label="节点名称">
             <el-input
               v-model="currentForm.blockName"
               maxlength="20"
-              maxLength="20"
               show-word-limit
             ></el-input>
           </el-form-item>
           <el-form-item label="流程列表">
             <el-tree
-              style="height:65vh"
+              style="height:53vh"
               :data="currentForm.process"
               node-key="id"
               default-expand-all
@@ -52,7 +58,6 @@
             <el-input
               v-model="currentForm.process"
               maxlength="20"
-              maxLength="20"
               show-word-limit
             ></el-input>
           </el-form-item>
@@ -63,13 +68,12 @@
               :rows='3'
               resize='none'
               maxlength="40"
-              maxLength="40"
               show-word-limit
             ></el-input>
           </el-form-item>
           <el-form-item label="触发器列表">
             <el-tree
-              style="height:50vh"
+              style="height:39vh"
               :data="currentForm.triggersInfo"
               node-key="id"
               default-expand-all
@@ -81,7 +85,7 @@
             >
               <span
                 class="custom-tree-node"
-                slot-scope="{ node, data }"
+                slot-scope="{ node }"
               >
                 <span>{{ getName(node.label)}}</span>
               </span>
@@ -94,8 +98,8 @@
               :fetch-suggestions="querySearch"
               placeholder="请输入物体标签"
               v-model="currentForm.tag"
-              :maxlength="20"
-              maxLength="20"
+              maxlength="20"
+
               show-word-limit
               @blur="checkBlur"
             ></el-autocomplete>
